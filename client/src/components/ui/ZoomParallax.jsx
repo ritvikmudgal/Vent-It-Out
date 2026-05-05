@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useScroll, useTransform, motion } from 'framer-motion';
+import { useScroll, useTransform, motion, useSpring } from 'framer-motion';
 
 /**
  * ZoomParallax — scroll-driven zoom parallax.
@@ -14,11 +14,18 @@ export function ZoomParallax({ items = [] }) {
     offset: ['start start', 'end end'],
   });
 
-  const scale4 = useTransform(scrollYProgress, [0, 1], [1, 4]);
-  const scale5 = useTransform(scrollYProgress, [0, 1], [1, 5]);
-  const scale6 = useTransform(scrollYProgress, [0, 1], [1, 6]);
-  const scale8 = useTransform(scrollYProgress, [0, 1], [1, 8]);
-  const scale9 = useTransform(scrollYProgress, [0, 1], [1, 9]);
+  // Smooth out the scroll progress to prevent jitter
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  const scale4 = useTransform(smoothProgress, [0, 1], [1, 4]);
+  const scale5 = useTransform(smoothProgress, [0, 1], [1, 5]);
+  const scale6 = useTransform(smoothProgress, [0, 1], [1, 6]);
+  const scale8 = useTransform(smoothProgress, [0, 1], [1, 8]);
+  const scale9 = useTransform(smoothProgress, [0, 1], [1, 9]);
 
   const scales = [scale4, scale5, scale6, scale5, scale6, scale8, scale9];
 
@@ -63,6 +70,7 @@ export function ZoomParallax({ items = [] }) {
                 width: '100%',
                 alignItems: 'center',
                 justifyContent: 'center',
+                willChange: 'transform', // Optimization
               }}
             >
               <div

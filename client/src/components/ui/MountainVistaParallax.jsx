@@ -50,6 +50,7 @@ const MountainVistaParallax = ({ title = '', subtitle = '', children }) => {
       background-repeat: repeat-x;
       animation-timing-function: linear;
       animation-iteration-count: infinite;
+      will-change: background-position;
     }
 
     .mountain-vista .hero-content {
