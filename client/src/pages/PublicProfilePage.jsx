@@ -1,35 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import BounceCards from '../components/BounceCards';
 import { apiFetch } from '../api';
+import { getAvatar } from '../avatarPack';
+import { AuthContext } from '../AuthContext';
 
 const PublicProfilePage = () => {
   const { username } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
 
   useEffect(() => {
-    const fetchProfileData = async () => {
+    const fetch = async () => {
       try {
-        // Fetch Profile
-        const resProfile = await apiFetch(`/auth/profile/${username}`);
-        if(resProfile.ok) setProfile(await resProfile.json());
+        const resP = await apiFetch(`/auth/profile/${username}`);
+        if (resP.ok) setProfile(await resP.json());
 
-        // Fetch user's public posts
-        const allPublic = await apiFetch(`/posts/public`);
-        if(allPublic.ok) {
-          const publicData = await allPublic.json();
-          setPosts(publicData.filter(p => !p.isAnonymous && p.userId?.username === username));
+        const resAll = await apiFetch('/posts/public');
+        if (resAll.ok) {
+          const all = await resAll.json();
+          setPosts(all.filter(p => !p.isAnonymous && p.userId?.username === username));
         }
-
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     };
-    fetchProfileData();
+    fetch();
   }, [username]);
+
+  const avatar = profile ? getAvatar(profile.avatarId) : null;
 
   return (
     <div className="desk-background">
@@ -37,50 +37,64 @@ const PublicProfilePage = () => {
         <Navbar />
 
         {profile ? (
-          <div style={{ display: 'flex', gap: '4rem', marginTop: '3rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1', minWidth: '300px' }}>
-              <h2 className="title" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-                {profile.username}
-              </h2>
-              
-              <div className="postcard" style={{ padding: '2rem', marginBottom: '2rem' }}>
-                <h3 style={{ fontFamily: 'var(--font-ui)', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Public Stats</h3>
-                <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-                    <span>Letters Sent</span>
-                    <strong>{profile.totalPosts || 0}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-                    <span>Likes Received</span>
-                    <strong>{profile.likesReceived || 0}</strong>
-                  </div>
+          <div style={{ display: 'flex', gap: '2.5rem', marginTop: '2rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 300 }}>
+              {/* Avatar + name */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem' }}>
+                <div style={{
+                  width: 80, height: 80, borderRadius: '50%',
+                  background: profile.profilePicture
+                    ? `url(${profile.profilePicture}) center/cover`
+                    : `linear-gradient(135deg, ${avatar.color}25, ${avatar.color}45)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '2.2rem', border: `3px solid ${avatar.color}`,
+                  overflow: 'hidden',
+                }}>
+                  {!profile.profilePicture && avatar.emoji}
+                </div>
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', margin: 0 }}>{profile.username}</h2>
+                  {profile.pronouns && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{profile.pronouns}</span>}
                 </div>
               </div>
 
-              {/* Chat Button */}
-              <button 
-                onClick={() => navigate(`/chat?user=${profile._id}`)} 
-                className="btn btn-primary" 
-                style={{ width: '100%', fontSize: '1.2rem', padding: '1rem' }}
-              >
-                Send a Private Chat
-              </button>
+              {/* Bio */}
+              {profile.bio && (
+                <div className="profile-card" style={{ marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.95rem', color: 'var(--text-dark)', lineHeight: 1.6, fontStyle: 'italic' }}>
+                    "{profile.bio}"
+                  </p>
+                </div>
+              )}
 
+              {/* Stats */}
+              <div className="profile-card" style={{ marginBottom: '1.5rem' }}>
+                {[['Letters', profile.totalPosts], ['Likes', profile.likesReceived]].map(([l, v]) => (
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--pink-light)', fontSize: '0.92rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{l}</span>
+                    <strong style={{ color: 'var(--primary-color)' }}>{v || 0}</strong>
+                  </div>
+                ))}
+              </div>
+
+              {user && (
+                <button onClick={() => navigate(`/chat?user=${profile._id}`)} className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }}>
+                  Send a Chat 💬
+                </button>
+              )}
             </div>
 
-            <div style={{ flex: '2', minWidth: '300px' }}>
-              <h3 style={{ fontFamily: 'var(--font-ui)', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '2rem' }}>
-                Public Letters by {profile.username}
+            <div style={{ flex: 2, minWidth: 300 }}>
+              <h3 style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Public Letters by {profile.username} 💗
               </h3>
-              {posts.length > 0 ? (
-                <BounceCards posts={posts} enableHover={true} />
-              ) : (
-                <p style={{ color: 'DarkGoldenRod' }}>This user hasn't sent any public, non-anonymous letters.</p>
+              {posts.length > 0 ? <BounceCards posts={posts} /> : (
+                <p style={{ color: 'var(--text-muted)' }}>No public non-anonymous letters yet.</p>
               )}
             </div>
           </div>
         ) : (
-          <p style={{ textAlign: 'center', marginTop: '4rem' }}>Loading or User not found...</p>
+          <p style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--text-muted)' }}>Loading...</p>
         )}
       </div>
     </div>

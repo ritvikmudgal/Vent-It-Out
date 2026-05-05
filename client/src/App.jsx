@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useSearchParams, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
@@ -10,6 +10,34 @@ import ChatPage from './pages/ChatPage';
 import { AuthContext } from './AuthContext';
 import AmbientDust from './components/AmbientDust';
 import CursorTrail from './components/CursorTrail';
+import HeartPop from './components/HeartPop';
+import { getApiUrl } from './api';
+
+// Google OAuth callback handler
+const AuthCallback = () => {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { login } = React.useContext(AuthContext);
+
+  React.useEffect(() => {
+    const token = params.get('token');
+    const userStr = params.get('user');
+    if (token && userStr) {
+      try {
+        const userData = { ...JSON.parse(userStr), token };
+        login(userData);
+        navigate('/home');
+      } catch (e) {
+        console.error('OAuth callback error', e);
+        navigate('/auth');
+      }
+    } else {
+      navigate('/auth');
+    }
+  }, []);
+
+  return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Logging in...</div>;
+};
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -19,6 +47,18 @@ function App() {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    // ── Keep backend alive (Render/Vercel free tier) ──
+    const pingBackend = () => {
+      fetch(`${getApiUrl()}/ping`).catch(() => {}); 
+    };
+    
+    // Initial ping
+    pingBackend();
+    
+    // Ping every 2 minutes
+    const interval = setInterval(pingBackend, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   const login = (userData) => {
@@ -36,9 +76,11 @@ function App() {
       <div className="app-wrapper">
         <AmbientDust />
         <CursorTrail />
+        <HeartPop />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/user/:username" element={<PublicProfilePage />} />

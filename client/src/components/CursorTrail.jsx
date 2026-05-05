@@ -2,14 +2,12 @@ import React, { useEffect, useRef } from 'react';
 
 const CursorTrail = () => {
   const canvasRef = useRef(null);
-  const mouse = useRef({ x: -100, y: -100 });
-  const trail = useRef([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
+
     let width = window.innerWidth;
     let height = window.innerHeight;
     canvas.width = width;
@@ -23,47 +21,50 @@ const CursorTrail = () => {
     };
     window.addEventListener('resize', handleResize);
 
-    const handleMouseMove = (e) => {
-      mouse.current.x = e.clientX;
-      mouse.current.y = e.clientY;
-    };
-    window.addEventListener('mousemove', handleMouseMove);
+    const trail = [];
+    const maxLength = 20;
 
-    let animationFrame;
+    const handleMove = (e) => {
+      trail.push({ x: e.clientX, y: e.clientY, life: 1 });
+      if (trail.length > maxLength) trail.shift();
+    };
+    window.addEventListener('mousemove', handleMove);
+
+    let raf;
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Interpolate or add point directly
-      trail.current.push({ x: mouse.current.x, y: mouse.current.y, age: 0 });
+      for (let i = trail.length - 1; i >= 0; i--) {
+        const p = trail[i];
+        p.life -= 0.04;
+        if (p.life <= 0) { trail.splice(i, 1); continue; }
 
-      ctx.beginPath();
-      for (let i = 0; i < trail.current.length; i++) {
-        const p = trail.current[i];
-        p.age += 1;
-        
-        ctx.globalAlpha = Math.max(0, 1 - p.age / 40);
-        ctx.fillStyle = '#D64550'; // Using the primary accent red from the vintage envelope
+        const radius = p.life * 4;
+        const alpha = p.life * 0.5;
+
         ctx.beginPath();
-        const size = Math.max(0, 4 - (p.age / 10));
-        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(232, 115, 154, ${alpha})`;
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
 
-      trail.current = trail.current.filter(p => p.age < 40);
-
-      animationFrame = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
     };
     draw();
 
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrame);
+      window.removeEventListener('mousemove', handleMove);
     };
   }, []);
 
-  return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9999 }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 2 }}
+    />
+  );
 };
 
 export default CursorTrail;
