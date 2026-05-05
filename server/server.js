@@ -23,6 +23,7 @@ const io = new Server(server, {
 });
 
 // Middleware
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json({ limit: "5mb" })); // Increased for base64 avatar uploads
 app.use(passport.initialize());
