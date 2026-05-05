@@ -29,6 +29,9 @@ app.use(passport.initialize());
 
 // Database connection
 const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error("CRITICAL: MONGO_URI is not defined in environment variables.");
+}
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("MongoDB connected"))
